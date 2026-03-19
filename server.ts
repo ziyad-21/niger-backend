@@ -23,13 +23,18 @@ app.use(express.json());
 // File upload setup for database restore
 const upload = multer({ dest: 'uploads/' });
 
+const dataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
 // SQLite Connection
 let db: Database<sqlite3.Database, sqlite3.Statement>;
 
 async function initDb() {
   try {
     db = await open({
-      filename: path.join(__dirname, 'database.sqlite'),
+      filename: path.join(dataDir, 'database.sqlite'),
       driver: sqlite3.Database
     });
     console.log('Connected to SQLite database');
@@ -205,7 +210,7 @@ app.get('/api/database/stats', async (req, res) => {
 });
 
 app.get('/api/database/backup', (req, res) => {
-  const file = path.join(__dirname, 'database.sqlite');
+  const file = path.join(dataDir, 'database.sqlite');
   res.download(file, `backup_${new Date().toISOString().split('T')[0]}.sqlite`);
 });
 
@@ -217,7 +222,7 @@ app.post('/api/database/restore', upload.single('database'), async (req, res) =>
     await db.close();
     
     // Replace database file
-    const dbPath = path.join(__dirname, 'database.sqlite');
+    const dbPath = path.join(dataDir, 'database.sqlite');
     fs.copyFileSync(req.file.path, dbPath);
     fs.unlinkSync(req.file.path); // Clean up uploaded file
     
